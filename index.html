@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestão de Vendas de Camarão</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #e9f7ff;
+            margin: 0;
+            padding: 20px;
+            color: #333;
+        }
+        .container {
+            max-width: 900px;
+            margin: auto;
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+        h1 {
+            text-align: center;
+            color: #007bff;
+        }
+        .resumo {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            justify-content: center;
+            margin: 20px 0;
+        }
+        .card {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+            min-width: 180px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .card h3 {
+            margin: 0;
+            font-size: 16px;
+            color: #555;
+        }
+        .valor {
+            font-size: 28px;
+            font-weight: bold;
+            margin: 10px 0 0;
+        }
+        .positivo { color: #28a745; }
+        .negativo { color: #dc3545; }
+        .neutro { color: #007bff; }
+
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            justify-content: center;
+        }
+        .tab {
+            padding: 10px 20px;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 8px 8px 0 0;
+            cursor: pointer;
+        }
+        .tab.active {
+            background: #0056b3;
+        }
+
+        form {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 30px;
+            padding: 15px;
+            background: #f1f1f1;
+            border-radius: 8px;
+        }
+        input, select, button {
+            padding: 12px;
+            font-size: 16px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+        button {
+            background: #28a745;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        button:hover {
+            background: #218838;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 10px;
+            text-align: left;
+        }
+        th {
+            background: #007bff;
+            color: white;
+        }
+        .venda { color: #28a745; }
+        .despesa { color: #dc3545; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🌊 Gestão de Vendas de Camarão</h1>
+
+        <div class="resumo">
+            <div class="card">
+                <h3>Dinheiro Entrado</h3>
+                <div class="valor positivo" id="totalEntradas">R$ 0,00</div>
+            </div>
+            <div class="card">
+                <h3>Dinheiro Saído</h3>
+                <div class="valor negativo" id="totalSaidas">R$ 0,00</div>
+            </div>
+            <div class="card">
+                <h3>Lucro Líquido</h3>
+                <div class="valor" id="lucro">R$ 0,00</div>
+            </div>
+            <div class="card">
+                <h3>Kg Vendidos</h3>
+                <div class="valor neutro" id="totalKg">0 kg</div>
+            </div>
+        </div>
+
+        <div class="tabs">
+            <button class="tab active" onclick="mostrar('venda')">Registrar Venda</button>
+            <button class="tab" onclick="mostrar('despesa')">Registrar Despesa</button>
+        </div>
+
+        <form id="formTransacao">
+            <input type="text" id="descricao" placeholder="Descrição (ex: Venda para João)" required>
+            <input type="number" id="valor" placeholder="Valor (R$)" step="0.01" required>
+            <input type="number" id="kg" placeholder="Kg vendidos (só em vendas)" step="0.1">
+            <select id="tipo">
+                <option value="venda">Venda</option>
+                <option value="despesa">Despesa</option>
+            </select>
+            <button type="submit">Registrar</button>
+        </form>
+
+        <h2 style="text-align:center;">Histórico de Movimentos</h2>
+        <table id="tabelaTransacoes">
+            <thead>
+                <tr>
+                    <th>Data</th>
+                    <th>Descrição</th>
+                    <th>Tipo</th>
+                    <th>Kg</th>
+                    <th>Valor</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+
+    <script>
+        let transacoes = JSON.parse(localStorage.getItem('transacoesCamarao')) || [];
+
+        const tabelaBody = document.querySelector('#tabelaTransacoes tbody');
+        const form = document.getElementById('formTransacao');
+
+        function formatarData() {
+            const agora = new Date();
+            return agora.toLocaleDateString('pt-BR') + ' ' + agora.toLocaleTimeString('pt-BR', {hour: '2-digit', minute: '2-digit'});
+        }
+
+        function atualizarResumo() {
+            let entradas = 0, saidas = 0, kgTotal = 0;
+
+            transacoes.forEach(t => {
+                if (t.tipo === 'venda') {
+                    entradas += parseFloat(t.valor);
+                    if (t.kg) kgTotal += parseFloat(t.kg);
+                } else {
+                    saidas += parseFloat(t.valor);
+                }
+            });
+
+            const lucro = entradas - saidas;
+
+            document.getElementById('totalEntradas').textContent = `R$ ${entradas.toFixed(2).replace('.', ',')}`;
+            document.getElementById('totalSaidas').textContent = `R$ ${saidas.toFixed(2).replace('.', ',')}`;
+            document.getElementById('lucro').textContent = `R$ ${lucro.toFixed(2).replace('.', ',')}`;
+            document.getElementById('lucro').className = lucro >= 0 ? 'valor positivo' : 'valor negativo';
+            document.getElementById('totalKg').textContent = `${kgTotal.toFixed(1)} kg`;
+        }
+
+        function atualizarTabela() {
+            tabelaBody.innerHTML = '';
+            transacoes.forEach(t => {
+                const tr = document.createElement('tr');
+                const classe = t.tipo === 'venda' ? 'venda' : 'despesa';
+                const valorFormatado = parseFloat(t.valor).toFixed(2).replace('.', ',');
+                const kgTexto = t.kg ? `${parseFloat(t.kg).toFixed(1)} kg` : '-';
+
+                tr.innerHTML = `
+                    <td>${t.data}</td>
+                    <td>${t.descricao}</td>
+                    <td>${t.tipo === 'venda' ? 'Venda' : 'Despesa'}</td>
+                    <td>${kgTexto}</td>
+                    <td class="\( {classe}">R \) ${valorFormatado}</td>
+                `;
+                tabelaBody.appendChild(tr);
+            });
+            atualizarResumo();
+        }
+
+        function mostrar(t
